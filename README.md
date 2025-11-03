@@ -14,7 +14,7 @@ This repository documents my journey from career transition to security research
 ## 🛠️ Tools
 
 ### Phase 1: Foundations (Months 1-2)
-- [ ] **Log Parser & Analyzer** - Parse and analyze security logs (syslog, Apache, nginx)
+- [x] **Log Parser & Analyzer** - Parse and analyze security logs (syslog, Apache, nginx)
 - [ ] **Port Scanner** - TCP/UDP scanning with service detection
 - [ ] **Subdomain Enumerator** - DNS enumeration and certificate transparency
 - [ ] **Web Vulnerability Scanner** - Basic XSS and SQL injection detection
