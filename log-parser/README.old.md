@@ -3,7 +3,7 @@
 A Python tool to parse and analyze security logs from various formats. Currently supports syslog format with plans to expand to Apache and nginx logs.
 
 **Version:** 1.0  
-**Status:** In Progress
+**Status:** Production-ready ✅
 
 ## Features
 
@@ -185,7 +185,7 @@ The repository includes several test files to verify functionality:
 1. **sample.log** - 8 perfect syslog entries (normal operation)
 2. **empty.log** - Empty file (edge case)
 3. **malformed.log** - Mix of valid and invalid lines (error handling)
-4. **large.log** - 49 entries (performance test)
+4. **large.log** - 50 entries (performance test)
 
 ### Running Tests
 
@@ -207,7 +207,7 @@ python3 log_parser.py empty.log
 - **sample.log**: 8/8 lines parsed successfully
 - **malformed.log**: ~6/10 lines parsed (4 failures expected)
 - **large.log**: 50/50 lines parsed successfully
-- **empty.log**: 1 lines, no crashes
+- **empty.log**: 0 lines, no crashes
 
 ## Security Use Cases
 
@@ -302,12 +302,12 @@ You are free to use, modify, and distribute this tool for any purpose, including
 
 **Kristen Brickner**
 - **GitHub**: [@kbrickz](https://github.com/kbrickz)
-- **Twitter**: [@kaybrickz](https://x.com/kaybrickz)
+- **X**: [@kaybrickz](https://x.com/kaybrickz)
 - **Blog**: [kbrickz.github.io](https://kbrickz.github.io)
 
 ## Acknowledgments
 
-Built as part of a security researcher curriculum focusing on:
+Built as part of a 12-month security researcher curriculum focusing on:
 - Python automation for security
 - Web application security
 - Cloud security (AWS/Azure)
@@ -322,7 +322,7 @@ This is the first tool in a collection of 6-8 security tools to be built over th
 - Syslog format parsing
 - Error handling
 - Multiple test files
-- Documentation
+- Production-ready documentation
 
 ---
 
