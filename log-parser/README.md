@@ -9,12 +9,15 @@ A Python tool to parse and analyze security logs from various formats. Currently
 
 - [x] Parse syslog format
 - [x] Structured output (timestamp, hostname, process, PID, message)
+- [x] **Export to JSON** ✨ (NEW in v1.1)
+- [x] Export to human-readable text
+- [x] Command-line interface with format selection
 - [x] Error handling (missing files, permissions, malformed lines)
 - [x] Multiple file testing
-- [ ] Parse Apache logs (planned v1.1)
-- [ ] Parse nginx logs (planned v1.1)
-- [ ] Detect patterns (failed logins, unusual activity) (planned v1.2)
-- [ ] Export to JSON/CSV (planned v1.2)
+- [ ] Parse Apache logs (planned v1.2)
+- [ ] Parse nginx logs (planned v1.2)
+- [ ] Detect patterns (failed logins, unusual activity) (planned v1.3)
+- [ ] Export to CSV (planned v1.3)
 
 ## Installation
 
@@ -75,15 +78,77 @@ chmod +x run_tests.sh
 ./run_tests.sh
 ```
 
-### Command Line Options
+### Export to JSON
 
-Currently, the tool accepts a single argument: the path to a log file.
-
+**Print JSON to stdout:**
+```bash
+python3 log_parser.py --format json sample.log
 ```
-Usage: python3 log_parser.py <logfile>
 
-Arguments:
-  logfile    Path to the log file to parse (required)
+**Save JSON to file:**
+```bash
+python3 log_parser.py --format json --output results.json sample.log
+```
+
+**Example JSON output:**
+```json
+[
+  {
+    "timestamp": "Nov 10 10:23:45",
+    "hostname": "server1",
+    "process": "sshd",
+    "pid": "1234",
+    "message": "Failed password for admin from 192.168.1.100"
+  },
+  {
+    "timestamp": "Nov 10 10:23:46",
+    "hostname": "server1",
+    "process": "sshd",
+    "pid": "1234",
+    "message": "Connection closed"
+  }
+]
+```
+
+**Use JSON output with other tools:**
+```bash
+# Filter for failed logins
+python3 log_parser.py --format json auth.log | jq '.[] | select(.message | contains("Failed"))'
+
+# Count processes
+python3 log_parser.py --format json sample.log | jq 'group_by(.process) | map({process: .[0].process, count: length})'
+
+# Export for analysis in Python
+python3 log_parser.py --format json --output data.json server.log
+python3 -c "import json; data = json.load(open('data.json')); print(len(data))"
+```
+
+### Command Line Options
+```
+Usage: python3 log_parser.py [-h] [--format {text,json}] [--output OUTPUT] logfile
+
+positional arguments:
+  logfile              Path to the log file to parse (required)
+
+optional arguments:
+  -h, --help           Show this help message and exit
+  --format {text,json} Output format: 'text' for console, 'json' for structured data (default: text)
+  --output OUTPUT      Output filename. If not specified, prints to stdout
+```
+
+**Examples:**
+```bash
+# Default: text output to console
+python3 log_parser.py sample.log
+
+# JSON output to console
+python3 log_parser.py --format json sample.log
+
+# JSON output to file
+python3 log_parser.py --format json --output results.json sample.log
+
+# Text output to file (for saving reports)
+python3 log_parser.py sample.log > report.txt
 ```
 
 ## Output Format
@@ -258,9 +323,9 @@ See [Roadmap](#roadmap) for planned improvements.
 
 ## Roadmap
 
-**v1.1**: Apache and nginx log support  
-**v1.2**: JSON and CSV export  
-**v1.3**: Pattern detection (failed logins, brute force)  
+**v1.1**: ✅ JSON export (COMPLETE)  
+**v1.2**: Apache and nginx log support  
+**v1.3**: CSV export, pattern detection (failed logins, brute force)  
 **v2.0**: Real-time monitoring, streaming parser
 
 ## Troubleshooting
@@ -323,6 +388,14 @@ This is the first tool in a collection of 6-8 security tools to be built over th
 - Error handling
 - Multiple test files
 - Documentation
+
+**v1.1** (November 2025)
+- Added JSON export functionality
+- Command-line argument parsing with argparse
+- Support for `--format` and `--output` flags
+- Validated JSON output with special character handling
+- Updated documentation with usage examples
+- Test files for edge cases (empty, single entry, special chars)
 
 ---
 

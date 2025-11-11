@@ -1,0 +1,10 @@
+Oct 30 10:15:23 server1 sshd[1234]: Accepted publickey for user1 from 10.0.0.100 port 22 ssh2
+This is not a valid syslog line at all
+Oct 30 10:16:45 server1 kernel[0]: Out of memory: Kill process 5678
+Another malformed line without proper format
+Oct 30 10:17:12 server1 systemd[1]: Started Session 42 of user admin
+Missing hostname and process here: Some random log message
+Oct 30 10:18:33 server1 cron[9999]: (root) CMD (run-parts /etc/cron.hourly)
+Oct 30 10:19:01 server1 sudo[1111]: user1 : TTY=pts/0 ; PWD=/home/user1 ; USER=root ; COMMAND=/bin/su
+Oct 30 incomplete timestamp format
+Oct 30 10:20:45 server1 apache2[2222]: 192.168.1.50 - - [30/Oct/2025:10:20:45] "GET /admin HTTP/1.1" 403

@@ -4,12 +4,14 @@ Security Log Parser
 A tool to parse and analyze security logs from various formats.
 
 Author: Kristen Brickner
-Date: October 2025
-Purpose: Week 1 Day 4 - First security tool for curriculum
+Date: November, 10 2025
+Purpose: First security tool
 """
 
-import re  # Regular expressions for pattern matching
+import re  # Regular expressions 
 import sys  # System-specific parameters and functions
+import json # JavaScript Object Notation encoder and decoder
+import argparse # Argument Parser
 
 
 def read_file(filename):
@@ -91,63 +93,117 @@ def parse_syslog(line):
         return None
 
 
+def export_text(entries):
+    """
+    Export parsed log entries in human-readable text format.
+
+    This is the original console output format, now extracted
+    as a function for consistency with JSON export.
+
+    Args:
+        entries (list): List of dictionaries, each representing a parsed log entry
+    
+    Returns:
+        None (prints to stdout)
+    """
+    print(f"Total entries parsed: {len(entries)}\n")
+
+    for idx, entry in enumerate(entries, start=1):
+        print(f"Entry {idx}:")
+        print(f"  Timestamp: {entry['timestamp']}")
+        print(f"  Hostname: {entry['hostname']}")
+        print(f"  Process: {entry['process']} (PID: {entry['pid']})")
+        print(f"  Message: {entry['message']}")
+        print()
+    
+    print("-" * 60)
+    print(f"Summary: {len(entries)} entries successfully parsed")
+
+def export_json(entries, output_file=None):
+    """
+    Export parsed log entries to JSON format.
+
+    JSON export is useful for:
+    - Ingesting logs into other tools (SIEM, databases)
+    - Programmatic analysis (jq, Python scripts)
+    - Data pipelines and automation
+
+    Args:
+        entries (list): List of dictionaries, each representing a parsed log entry
+        output_file (str): Output filename. or None to print stdout
+    
+    Returns:
+        None (writes to file or stdout)
+    
+    Raises:
+        IOError: If file cannot be written
+    """
+    try:
+        if output_file:
+            # Write to file
+            with open(output_file, 'w') as f:
+                json.dump(entries, f, indent=2, ensure_ascii=False)
+            print(f"Successfully exported {len(entries)} entries to {output_file}")
+        else:
+            # Print to stdout
+            print(json.dumps(entries, indent=2, ensure_ascii=False))
+    
+    except IOError as e:
+        print(f"Error writing JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+    except TypeError as e:
+        print(f"Error serializing to JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+
 def main():
     """
     Main function to orchestrate log parsing.
-    
-    Usage: python log_parser.py <logfile>
-    """
-    # Check if user provided a filename
-    if len(sys.argv) < 2:
-        print("Usage: python log_parser.py <logfile>")
-        print("Example: python log_parser.py sample.log")
-        sys.exit(1)
-    
-    # Get filename from command line argument
-    filename = sys.argv[1]
-    
-    print(f"Parsing log file: {filename}")
-    print("-" * 60)
-    
-    # Read the log file
-    lines = read_file(filename)
-    
-    print(f"Total lines read: {len(lines)}\n")
-    
-    # Parse each line
-    parsed_count = 0
-    failed_count = 0
-    
-    for line_num, line in enumerate(lines, start=1):
-        # Skip empty lines
-        if not line:
-            continue
-        
-        # Parse the line
-        parsed = parse_syslog(line)
-        
-        if parsed:
-            parsed_count += 1
-            # Print parsed result
-            print(f"Line {line_num}:")
-            print(f"  Timestamp: {parsed['timestamp']}")
-            print(f"  Hostname:  {parsed['hostname']}")
-            print(f"  Process:   {parsed['process']} (PID: {parsed['pid']})")
-            print(f"  Message:   {parsed['message']}")
-            print()
-        else:
-            failed_count += 1
-            print(f"Line {line_num}: Failed to parse")
-            print(f"  Raw: {line}")
-            print()
-    
-    # Print summary
-    print("-" * 60)
-    print(f"Summary:")
-    print(f"  Successfully parsed: {parsed_count}")
-    print(f"  Failed to parse:     {failed_count}")
-    print(f"  Total lines:         {len(lines)}")
 
+    Usage:
+        python log_parser.py <logfile>
+        python log_parser.py --format json <logfile>
+        python log_parser.py --format json --output results.json <logfile>
+    """
+    # Set up command-line argument parser
+    parser = argparse.ArgumentParser(
+        description='Parse security logs and export in various formats',
+        epilog='Example: python log_parser.py --format json --output results.json sample.log'
+    )
+
+    # Required positional argument: the log file
+    parser.add_argument('logfile',
+                        help='Path to log file to parse')
+    
+    # Optional: output format
+    parser.add_argument('--format',
+                        choices=['text', 'json'],
+                        default='text',
+                        help='Output format (default: text)')
+
+    # Optional: output file
+    parser.add_argument('--output',
+                        help='Output filename (default: stdout)')
+    
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Read the log file
+    lines = read_file(args.logfile)
+
+    # Parse all lines into a list of dictionaries
+    entries = []
+    for line in lines:
+        if not line: # Skip empty lines
+            continue
+        parsed = parse_syslog(line)
+        if parsed:
+            entries.append(parsed)
+    
+    # Output based on format
+    if args.format == 'json':
+        export_json(entries, args.output)
+    else:
+        export_text(entries)
 
 if __name__ == "__main__":
     # This ensures main() only runs when script is executed directly,

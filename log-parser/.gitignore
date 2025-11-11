@@ -42,9 +42,21 @@ ENV/
 .coverage
 htmlcov/
 
-# Logs
-*.log
-
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated output files
+results.json
+output*.json
+*_output.json
+*_output.log
+
+# Log files (but keep test fixtures)
+*.log
+!sample.log
+!empty.log
+!malformed.log
+!large.log
+!test_single.log
+!test_special_chars.log

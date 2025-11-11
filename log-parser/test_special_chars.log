@@ -1,0 +1,4 @@
+Nov 10 10:23:45 server1 app[5678]: User said "Hello, world!"
+Nov 10 10:23:46 server1 app[5678]: Error: File not found at path/to/file
+Nov 10 10:23:47 server1 app[5679]: JSON: {"key": "value", "count": 42}
+Nov 10 10:23:48 server1 app[5680]: Special chars: <>&"'

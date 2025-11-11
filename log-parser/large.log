@@ -1,0 +1,49 @@
+Oct 30 08:00:01 webserver cron[1001]: (root) CMD (run-parts /etc/cron.daily)
+Oct 30 08:00:15 webserver systemd[1]: Started Daily apt download activities
+Oct 30 08:01:23 webserver sshd[5001]: Accepted publickey for admin from 203.0.113.10 port 54321 ssh2
+Oct 30 08:02:34 webserver kernel[0]: TCP: time wait bucket table overflow
+Oct 30 08:03:45 webserver apache2[3001]: 198.51.100.25 - - [30/Oct/2025:08:03:45] "GET /index.html HTTP/1.1" 200
+Oct 30 08:04:56 webserver apache2[3001]: 198.51.100.25 - - [30/Oct/2025:08:04:56] "GET /api/users HTTP/1.1" 200
+Oct 30 08:05:12 webserver sshd[5002]: Failed password for root from 192.0.2.100 port 33445 ssh2
+Oct 30 08:05:13 webserver sshd[5002]: Failed password for root from 192.0.2.100 port 33445 ssh2
+Oct 30 08:05:14 webserver sshd[5002]: Failed password for root from 192.0.2.100 port 33445 ssh2
+Oct 30 08:05:15 webserver sshd[5002]: Failed password for root from 192.0.2.100 port 33445 ssh2
+Oct 30 08:05:16 webserver sshd[5002]: Failed password for root from 192.0.2.100 port 33445 ssh2
+Oct 30 08:06:23 webserver sudo[6001]: admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/usr/bin/apt update
+Oct 30 08:07:34 webserver systemd[1]: Starting Clean php session files
+Oct 30 08:08:45 webserver apache2[3001]: 198.51.100.30 - - [30/Oct/2025:08:08:45] "POST /api/login HTTP/1.1" 200
+Oct 30 08:09:56 webserver mysql[4001]: Access denied for user 'webapp'@'localhost' (using password: YES)
+Oct 30 08:10:12 webserver kernel[0]: oom_reaper: reaped process 7890 (nodejs), now anon-rss:0kB
+Oct 30 08:11:23 webserver sshd[5003]: Accepted publickey for deploy from 203.0.113.50 port 60001 ssh2
+Oct 30 08:12:34 webserver systemd[1]: Started User Manager for UID 1001
+Oct 30 08:13:45 webserver apache2[3001]: 198.51.100.35 - - [30/Oct/2025:08:13:45] "GET /admin/dashboard HTTP/1.1" 403
+Oct 30 08:14:56 webserver apache2[3001]: 198.51.100.35 - - [30/Oct/2025:08:14:56] "GET /admin/login HTTP/1.1" 200
+Oct 30 08:15:12 webserver postfix[8001]: NOQUEUE: reject: 554 5.7.1 Relay access denied
+Oct 30 08:16:23 webserver cron[1001]: (www-data) CMD (php /var/www/cron.php)
+Oct 30 08:17:34 webserver systemd[1]: Starting Daily man-db regeneration
+Oct 30 08:18:45 webserver sshd[5004]: Connection closed by 192.0.2.200 port 44556 [preauth]
+Oct 30 08:19:56 webserver apache2[3001]: 198.51.100.40 - - [30/Oct/2025:08:19:56] "GET /robots.txt HTTP/1.1" 404
+Oct 30 08:20:12 webserver kernel[0]: TCP: request_sock_TCP: Possible SYN flooding on port 80
+Oct 30 08:21:23 webserver fail2ban[2001]: WARNING [sshd] Ban 192.0.2.100
+Oct 30 08:22:34 webserver systemd[1]: Started Session 10 of user admin
+Oct 30 08:23:45 webserver apache2[3001]: 198.51.100.45 - - [30/Oct/2025:08:23:45] "GET /api/data HTTP/1.1" 500
+Oct 30 08:24:56 webserver mysql[4001]: [Warning] Aborted connection 1234 to db: 'webapp'
+Oct 30 08:25:12 webserver sshd[5005]: Accepted password for user1 from 203.0.113.100 port 55123 ssh2
+Oct 30 08:26:23 webserver sudo[6002]: user1 : TTY=pts/1 ; PWD=/home/user1 ; USER=root ; COMMAND=/bin/systemctl restart nginx
+Oct 30 08:27:34 webserver systemd[1]: Stopping A high performance web server
+Oct 30 08:28:45 webserver systemd[1]: Starting A high performance web server
+Oct 30 08:29:56 webserver nginx[9001]: nginx: configuration file syntax is ok
+Oct 30 08:30:12 webserver apache2[3001]: 198.51.100.50 - - [30/Oct/2025:08:30:12] "GET /health HTTP/1.1" 200
+Oct 30 08:31:23 webserver kernel[0]: Firewall: IN=eth0 OUT= SRC=192.0.2.250 DST=203.0.113.1
+Oct 30 08:32:34 webserver sshd[5006]: Failed password for admin from 192.0.2.150 port 44789 ssh2
+Oct 30 08:33:45 webserver systemd[1]: Started Daily Cleanup of Temporary Directories
+Oct 30 08:34:56 webserver apache2[3001]: 198.51.100.55 - - [30/Oct/2025:08:34:56] "POST /api/upload HTTP/1.1" 413
+Oct 30 08:35:12 webserver postfix[8001]: C1234ABCD: from=<user@example.com>, size=1234
+Oct 30 08:36:23 webserver cron[1001]: (backup) CMD (/usr/local/bin/backup.sh)
+Oct 30 08:37:34 webserver systemd[1]: Starting Weekly apt download activities
+Oct 30 08:38:45 webserver sshd[5007]: Accepted publickey for monitoring from 203.0.113.200 port 60123 ssh2
+Oct 30 08:39:56 webserver apache2[3001]: 198.51.100.60 - - [30/Oct/2025:08:39:56] "GET /metrics HTTP/1.1" 200
+Oct 30 08:40:12 webserver kernel[0]: CPU0: Core temperature above threshold
+Oct 30 08:41:23 webserver mysql[4001]: [Note] Event Scheduler: Loaded 0 events
+Oct 30 08:42:34 webserver systemd[1]: Started User Manager for UID 1002
+Oct 30 08:43:45 webserver apache2[3001]: 198.51.100.65 - - [30/Oct/2025:08:43:45] "GET /api/status HTTP/1.1" 200
