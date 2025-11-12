@@ -4,13 +4,14 @@ Security Log Parser
 A tool to parse and analyze security logs from various formats.
 
 Author: Kristen Brickner
-Date: November, 10 2025
+Date: November, 12 2025
 Purpose: First security tool
 """
 
-import re  # Regular expressions 
-import sys  # System-specific parameters and functions
-import json # JavaScript Object Notation encoder and decoder
+import re       # Regular expressions 
+import sys      # System-specific parameters and functions
+import json     # JavaScript Object Notation encoder and decoder
+import csv      # CSV encoder and decoder
 import argparse # Argument Parser
 
 
@@ -155,6 +156,47 @@ def export_json(entries, output_file=None):
         print(f"Error serializing to JSON: {e}", file=sys.stderr)
         sys.exit(1)
 
+def export_csv(entries, output_file=None):
+    """
+    Export parsed log entries to CSV format.
+
+    CSV export is useful for:
+    - Spreadsheet analysis (Excel, Google Sheets)
+    - Database imports (SQLite, MySQL)
+    - Quick command-line filtering (grep, awk, cut)
+    - Reporting and visualization
+
+    Args:
+        entries (list): List of dictionaries, each representing a parsed log entry
+        output_file (str): Output filename, or None to print stdout
+    
+    Returns:
+        None (writes to file or stdout)
+    
+    Raises:
+        IOError: If file cannot be written
+    """
+    # Define CSV column order
+    fieldnames = ['timestamp', 'hostname', 'process', 'pid', 'message']
+
+    try:
+        if output_file:
+            # Write to file
+            with open(output_file, 'w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(entries)
+            print(f"Successfully exported {len(entries)} entries to {output_file}")
+        else:
+            # Write to stdout
+            writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(entries)
+
+    except IOError as e:
+        print(f"Error writing CSV: {e}", file=sys.stderr)
+        sys.exit(1)
+
 def main():
     """
     Main function to orchestrate log parsing.
@@ -162,13 +204,13 @@ def main():
     Usage:
         python log_parser.py <logfile>
         python log_parser.py --format json <logfile>
+        python log_parser.py --format csv <logfile>
         python log_parser.py --format json --output results.json <logfile>
     """
     # Set up command-line argument parser
     parser = argparse.ArgumentParser(
         description='Parse security logs and export in various formats',
-        epilog='Example: python log_parser.py --format json --output results.json sample.log'
-    )
+        epilog='Example: python log_parser.py --format json --output results.json sample.log')
 
     # Required positional argument: the log file
     parser.add_argument('logfile',
@@ -176,7 +218,7 @@ def main():
     
     # Optional: output format
     parser.add_argument('--format',
-                        choices=['text', 'json'],
+                        choices=['text', 'json', 'csv'],
                         default='text',
                         help='Output format (default: text)')
 
@@ -202,6 +244,8 @@ def main():
     # Output based on format
     if args.format == 'json':
         export_json(entries, args.output)
+    elif args.format == 'csv':
+        export_csv(entries, args.output)
     else:
         export_text(entries)
 

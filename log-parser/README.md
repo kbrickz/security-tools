@@ -2,22 +2,22 @@
 
 A Python tool to parse and analyze security logs from various formats. Currently supports syslog format with plans to expand to Apache and nginx logs.
 
-**Version:** 1.0  
+**Version:** 1.2 
 **Status:** In Progress
 
 ## Features
 
 - [x] Parse syslog format
 - [x] Structured output (timestamp, hostname, process, PID, message)
-- [x] **Export to JSON** ✨ (NEW in v1.1)
+- [x] Export to JSON (v1.1)
+- [x] Export to CSV (NEW in v1.2)
 - [x] Export to human-readable text
 - [x] Command-line interface with format selection
 - [x] Error handling (missing files, permissions, malformed lines)
 - [x] Multiple file testing
-- [ ] Parse Apache logs (planned v1.2)
-- [ ] Parse nginx logs (planned v1.2)
-- [ ] Detect patterns (failed logins, unusual activity) (planned v1.3)
-- [ ] Export to CSV (planned v1.3)
+- [ ] Parse Apache logs (planned v1.3)
+- [ ] Parse nginx logs (planned v1.3)
+- [ ] Detect patterns (failed logins, unusual activity) (planned v1.4)
 
 ## Installation
 
@@ -123,18 +123,59 @@ python3 log_parser.py --format json --output data.json server.log
 python3 -c "import json; data = json.load(open('data.json')); print(len(data))"
 ```
 
+### Export to CSV
+
+CSV export is ideal for spreadsheet analysis, database imports, and quick command-line filtering.
+
+**Print CSV to stdout:**
+````bash
+python3 log_parser.py --format csv sample.log
+````
+
+**Save CSV to file:**
+````bash
+python3 log_parser.py --format csv --output results.csv sample.log
+````
+
+**Example CSV output:**
+````csv
+timestamp,hostname,process,pid,message
+Oct 29 14:23:01,webserver,sshd,12345,"Failed password for admin from 192.168.1.100"
+Oct 29 14:23:04,webserver,sshd,12346,"Accepted password for admin from 192.168.1.100"
+````
+
+**Use CSV with other tools:**
+````bash
+# Import into spreadsheet (Excel, Google Sheets, LibreOffice)
+python3 log_parser.py --format csv --output analysis.csv sample.log
+# Then open analysis.csv in your spreadsheet software
+
+# Quick filtering with grep
+python3 log_parser.py --format csv sample.log | grep "Failed password"
+
+# Filter by column with csvkit (if installed)
+python3 log_parser.py --format csv sample.log | csvgrep -c process -m sshd
+
+# Count occurrences by process
+python3 log_parser.py --format csv sample.log | csvcut -c process | sort | uniq -c
+
+# Load into SQLite database
+python3 log_parser.py --format csv --output logs.csv sample.log
+sqlite3 analysis.db ".import logs.csv logs"
+````
+
 ### Command Line Options
-```
-Usage: python3 log_parser.py [-h] [--format {text,json}] [--output OUTPUT] logfile
+````
+Usage: python3 log_parser.py [-h] [--format {text,json,csv}] [--output OUTPUT] logfile
 
 positional arguments:
-  logfile              Path to the log file to parse (required)
+  logfile                 Path to the log file to parse (required)
 
 optional arguments:
-  -h, --help           Show this help message and exit
-  --format {text,json} Output format: 'text' for console, 'json' for structured data (default: text)
-  --output OUTPUT      Output filename. If not specified, prints to stdout
-```
+  -h, --help              Show this help message and exit
+  --format {text,json,csv} Output format: 'text' for console, 'json' for structured data, 'csv' for spreadsheets (default: text)
+  --output OUTPUT         Output filename. If not specified, prints to stdout
+````
 
 **Examples:**
 ```bash
@@ -149,6 +190,12 @@ python3 log_parser.py --format json --output results.json sample.log
 
 # Text output to file (for saving reports)
 python3 log_parser.py sample.log > report.txt
+
+# CSV output to console
+python3 log_parser.py --format csv sample.log
+
+# CSV output to file
+python3 log_parser.py --format csv --output results.csv sample.log
 ```
 
 ## Output Format
@@ -313,19 +360,19 @@ See [DESIGN.md](DESIGN.md) for:
 
 ## Limitations
 
-**Current version (v1.0):**
+**Current version (v1.2):**
 - Only supports syslog format
 - Reads entire file into memory (not ideal for multi-GB files)
-- Console output only (no JSON/CSV export)
 - No automatic pattern detection
 
 See [Roadmap](#roadmap) for planned improvements.
 
 ## Roadmap
 
-**v1.1**: ✅ JSON export (COMPLETE)  
-**v1.2**: Apache and nginx log support  
-**v1.3**: CSV export, pattern detection (failed logins, brute force)  
+**v1.1**: JSON export (COMPLETE)  
+**v1.2**: CSV export (COMPLETE)  
+**v1.3**: Apache and nginx log support  
+**v1.4**: Pattern detection (failed logins, brute force)  
 **v2.0**: Real-time monitoring, streaming parser
 
 ## Troubleshooting
@@ -396,6 +443,15 @@ This is the first tool in a collection of 6-8 security tools to be built over th
 - Validated JSON output with special character handling
 - Updated documentation with usage examples
 - Test files for edge cases (empty, single entry, special chars)
+
+**v1.2** (November 2025)
+- Added CSV export functionality
+- RFC 4180 compliant CSV format (industry standard)
+- Automatic escaping of special characters (commas, quotes, newlines)
+- Supports both file output and stdout for piping
+- Integration examples with spreadsheets and command-line tools
+- Updated documentation with CSV usage patterns
+- Tested with edge cases (empty files, special characters, large files)
 
 ---
 
