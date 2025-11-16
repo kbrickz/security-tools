@@ -2,7 +2,7 @@
 
 A Python tool to parse and analyze security logs from various formats. Currently supports syslog format with plans to expand to Apache and nginx logs.
 
-**Version:** 1.2 
+**Version:** 1.3
 **Status:** In Progress
 
 ## Features
@@ -10,14 +10,15 @@ A Python tool to parse and analyze security logs from various formats. Currently
 - [x] Parse syslog format
 - [x] Structured output (timestamp, hostname, process, PID, message)
 - [x] Export to JSON (v1.1)
-- [x] Export to CSV (NEW in v1.2)
+- [x] Export to CSV (v1.2)
+- [x] Anomaly detection with configurable thresholds (NEW in v1.3)
 - [x] Export to human-readable text
 - [x] Command-line interface with format selection
 - [x] Error handling (missing files, permissions, malformed lines)
 - [x] Multiple file testing
-- [ ] Parse Apache logs (planned v1.3)
-- [ ] Parse nginx logs (planned v1.3)
-- [ ] Detect patterns (failed logins, unusual activity) (planned v1.4)
+- [ ] Parse Apache logs (planned v1.4)
+- [ ] Parse nginx logs (planned v1.4)
+- [ ] Advanced anomaly detection (rate-based, IP tracking) (planned v2.0)
 
 ## Installation
 
@@ -164,9 +165,61 @@ python3 log_parser.py --format csv --output logs.csv sample.log
 sqlite3 analysis.db ".import logs.csv logs"
 ````
 
+### Anomaly Detection
+
+Detect security threats using threshold-based pattern matching.
+
+**Enable anomaly detection:**
+````bash
+python3 log_parser.py --detect sample.log
+````
+
+**Customize thresholds:**
+````bash
+# More sensitive detection (lower thresholds)
+python3 log_parser.py --detect --thresholds failed_logins=3 sample.log
+
+# Multiple custom thresholds
+python3 log_parser.py --detect --thresholds failed_logins=10 host_activity=30 sample.log
+````
+
+**What it detects:**
+- **Failed login attempts** (default threshold: 5) - Brute force attacks
+- **High activity hosts** (default threshold: 20) - Compromised systems
+- **Process anomalies** (default threshold: 15) - Malware or misconfigurations
+
+**Example output:**
+````
+==============================================================
+ANOMALY DETECTION REPORT
+==============================================================
+
+⚠️  1 anomaly type(s) detected
+
+🚨 FAILED LOGIN ATTEMPTS
+   Count: 8 (threshold: 5)
+   Risk: Possible brute force attack
+   Action: Investigate source IPs, consider blocking
+   
+   Sample entries:
+     1. [Nov 12 14:23:01] webserver: Failed password for admin...
+     2. [Nov 12 14:23:03] webserver: Failed password for admin...
+     3. [Nov 12 14:23:05] webserver: Failed password for admin...
+     ... and 5 more
+
+==============================================================
+````
+
+**Combine with export formats:**
+````bash
+# Detect anomalies AND export to JSON
+python3 log_parser.py --detect --format json --output results.json sample.log
+````
+
 ### Command Line Options
 ````
-Usage: python3 log_parser.py [-h] [--format {text,json,csv}] [--output OUTPUT] logfile
+Usage: python3 log_parser.py [-h] [--format {text,json,csv}] [--output OUTPUT] 
+                              [--detect] [--thresholds [THRESHOLDS ...]] logfile
 
 positional arguments:
   logfile                 Path to the log file to parse (required)
@@ -175,6 +228,9 @@ optional arguments:
   -h, --help              Show this help message and exit
   --format {text,json,csv} Output format: 'text' for console, 'json' for structured data, 'csv' for spreadsheets (default: text)
   --output OUTPUT         Output filename. If not specified, prints to stdout
+  --detect                Enable anomaly detection
+  --thresholds [THRESHOLDS ...]
+                          Custom thresholds (e.g., failed_logins=10 host_activity=30)
 ````
 
 **Examples:**
@@ -371,9 +427,10 @@ See [Roadmap](#roadmap) for planned improvements.
 
 **v1.1**: JSON export (COMPLETE)  
 **v1.2**: CSV export (COMPLETE)  
-**v1.3**: Apache and nginx log support  
-**v1.4**: Pattern detection (failed logins, brute force)  
-**v2.0**: Real-time monitoring, streaming parser
+**v1.3**: Threshold-based anomaly detection (COMPLETE)  
+**v1.4**: Apache and nginx log support  
+**v2.0**: Advanced anomaly detection (rate-based, IP tracking, ML)  
+**v2.5**: Real-time monitoring, streaming parser
 
 ## Troubleshooting
 
@@ -452,6 +509,16 @@ This is the first tool in a collection of 6-8 security tools to be built over th
 - Integration examples with spreadsheets and command-line tools
 - Updated documentation with CSV usage patterns
 - Tested with edge cases (empty files, special characters, large files)
+
+**v1.3** (November 2025)
+- Added threshold-based anomaly detection
+- Detects failed login attempts, high activity hosts, and process anomalies
+- Configurable thresholds via command line
+- Three-phase detection algorithm (counting, evaluation, reporting)
+- Comprehensive anomaly reporting with security context
+- Combined anomaly detection with existing export formats
+- Updated documentation with detection methodology
+- Test files for brute force and anomaly scenarios
 
 ---
 
