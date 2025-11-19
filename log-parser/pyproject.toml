@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "security-log-parser"
+version = "1.0.0"
+description = "Syslog parser and anomaly detector CLI."
+requires-python = ">=3.11"
+authors = [{ name = "Kristen Brickner" }]
+dependencies = []
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["log_parser"]

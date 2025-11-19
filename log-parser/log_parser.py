@@ -3,49 +3,99 @@
 Security Log Parser
 A tool to parse and analyze security logs from various formats.
 
-Author: Kristen Brickner
-Date: November, 12 2025
-Purpose: First security tool
+Copyright (c) 2025 Kristen Brickner
+Licensed under the MIT License. See LICENSE file for details.
 """
 
-import re       # Regular expressions 
+import re       # Regular expressions
 import sys      # System-specific parameters and functions
 import json     # JavaScript Object Notation encoder and decoder
 import csv      # CSV encoder and decoder
 import argparse # Argument Parser
+import os       # Filesystem / path utilities
+import logging  # Structured logging for warnings/errors
+from dataclasses import dataclass  # Structured data containers
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence
 
 
-def read_file(filename):
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class LogLine:
     """
-    Read a log file and return its contents as a list of lines.
+    Represents a single line read from a log file.
+
+    Attributes:
+        number (int): Line number within the file (1-indexed)
+        text (str): The decoded line content
+        decoding_issue (bool): True if latin-1 fallback was used to decode
+    """
+    number: int
+    text: str
+    decoding_issue: bool = False
+
+
+@dataclass
+class ParsedEntry:
+    """
+    Represents a parsed syslog entry.
+
+    Attributes mirror the syslog components exposed to downstream tooling.
+    """
+    timestamp: str
+    hostname: str
+    process: str
+    pid: str
+    message: str
+
+    def to_dict(self) -> Dict[str, str]:
+        """Convert to dict for serialization-friendly consumers."""
+        return {
+            'timestamp': self.timestamp,
+            'hostname': self.hostname,
+            'process': self.process,
+            'pid': self.pid,
+            'message': self.message,
+        }
+
+
+def read_file(filename: str) -> Iterator[LogLine]:
+    """
+    Stream a log file and yield its lines.
+
+    Handles encoding issues by trying UTF-8 first, then falling back to latin-1
     
     Args:
         filename (str): Path to the log file
         
-    Returns:
-        list: List of strings, each representing one line from the file
+    Yields:
+        LogLine: Metadata for each parsed line, including number, text,
+                 and whether latin-1 fallback was required.
         
     Raises:
         FileNotFoundError: If the specified file doesn't exist
         PermissionError: If we don't have permission to read the file
+        OSError: For other filesystem-related errors
     """
-    try:
-        with open(filename, 'r') as file:
-            # readlines() returns a list where each element is a line
-            # strip() removes trailing newlines and whitespace
-            lines = [line.strip() for line in file.readlines()]
-        return lines
-    
-    except FileNotFoundError:
-        print(f"Error: File '{filename}' not found.")
-        sys.exit(1)
-    
-    except PermissionError:
-        print(f"Error: Permission denied reading '{filename}'.")
-        sys.exit(1)
+    fallback_used = False
 
+    def decode_line(raw_line: bytes) -> tuple[str, bool]:
+        nonlocal fallback_used
+        try:
+            return raw_line.decode('utf-8').strip(), False
+        except UnicodeDecodeError:
+            if not fallback_used:
+                logger.warning("File contains non-UTF-8 characters, falling back to latin-1 encoding")
+                fallback_used = True
+            return raw_line.decode('latin-1').strip(), True
 
-def parse_syslog(line):
+    with open(filename, 'rb') as file:
+        for idx, raw_line in enumerate(file, start=1):
+            text, used_fallback = decode_line(raw_line)
+            yield LogLine(number=idx, text=text, decoding_issue=used_fallback)
+
+def parse_syslog(line: str) -> Optional[ParsedEntry]:
     """
     Parse a single syslog-format line into structured components.
     
@@ -82,19 +132,17 @@ def parse_syslog(line):
     
     if match:
         # If pattern matched, extract the groups
-        return {
-            'timestamp': match.group(1),
-            'hostname': match.group(2),
-            'process': match.group(3),
-            'pid': match.group(4),
-            'message': match.group(5)
-        }
-    else:
-        # Line doesn't match syslog format
-        return None
+        return ParsedEntry(
+            timestamp=match.group(1),
+            hostname=match.group(2),
+            process=match.group(3),
+            pid=match.group(4),
+            message=match.group(5)
+        )
+    # Line doesn't match syslog format
+    return None
 
-
-def export_text(entries):
+def export_text(entries: Sequence[ParsedEntry]) -> None:
     """
     Export parsed log entries in human-readable text format.
 
@@ -111,16 +159,16 @@ def export_text(entries):
 
     for idx, entry in enumerate(entries, start=1):
         print(f"Entry {idx}:")
-        print(f"  Timestamp: {entry['timestamp']}")
-        print(f"  Hostname: {entry['hostname']}")
-        print(f"  Process: {entry['process']} (PID: {entry['pid']})")
-        print(f"  Message: {entry['message']}")
+        print(f"  Timestamp: {entry.timestamp}")
+        print(f"  Hostname: {entry.hostname}")
+        print(f"  Process: {entry.process} (PID: {entry.pid})")
+        print(f"  Message: {entry.message}")
         print()
     
     print("-" * 60)
     print(f"Summary: {len(entries)} entries successfully parsed")
 
-def export_json(entries, output_file=None):
+def export_json(entries: Sequence[ParsedEntry], output_file: Optional[str] = None) -> None:
     """
     Export parsed log entries to JSON format.
 
@@ -139,24 +187,17 @@ def export_json(entries, output_file=None):
     Raises:
         IOError: If file cannot be written
     """
-    try:
-        if output_file:
-            # Write to file
-            with open(output_file, 'w') as f:
-                json.dump(entries, f, indent=2, ensure_ascii=False)
-            print(f"Successfully exported {len(entries)} entries to {output_file}")
-        else:
-            # Print to stdout
-            print(json.dumps(entries, indent=2, ensure_ascii=False))
-    
-    except IOError as e:
-        print(f"Error writing JSON: {e}", file=sys.stderr)
-        sys.exit(1)
-    except TypeError as e:
-        print(f"Error serializing to JSON: {e}", file=sys.stderr)
-        sys.exit(1)
+    serializable = [entry.to_dict() for entry in entries]
 
-def export_csv(entries, output_file=None):
+    if output_file:
+        with open(output_file, 'w') as f:
+            json.dump(serializable, f, indent=2, ensure_ascii=False)
+        logger.info("Successfully exported %d entries to %s", len(entries), output_file)
+    else:
+        # Print to stdout
+        print(json.dumps(serializable, indent=2, ensure_ascii=False))
+
+def export_csv(entries: Sequence[ParsedEntry], output_file: Optional[str] = None) -> None:
     """
     Export parsed log entries to CSV format.
 
@@ -179,25 +220,23 @@ def export_csv(entries, output_file=None):
     # Define CSV column order
     fieldnames = ['timestamp', 'hostname', 'process', 'pid', 'message']
 
-    try:
-        if output_file:
-            # Write to file
-            with open(output_file, 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(entries)
-            print(f"Successfully exported {len(entries)} entries to {output_file}")
-        else:
-            # Write to stdout
-            writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+    if output_file:
+        # Write to file
+        with open(output_file, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(entries)
+            writer.writerows(entry.to_dict() for entry in entries)
+        logger.info("Successfully exported %d entries to %s", len(entries), output_file)
+    else:
+        # Write to stdout
+        writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(entry.to_dict() for entry in entries)
 
-    except IOError as e:
-        print(f"Error writing CSV: {e}", file=sys.stderr)
-        sys.exit(1)
-
-def detect_anomalies(entries, thresholds=None):
+def detect_anomalies(
+    entries: Sequence[ParsedEntry],
+    thresholds: Optional[Dict[str, int]] = None
+) -> Dict[str, Any]:
     """
     Detect security anomalies in parsed entries using threshold-based rules.
 
@@ -292,19 +331,19 @@ def detect_anomalies(entries, thresholds=None):
     for entry in entries:
         # Detection Rule 1: Failed Login Attempts
         # Look for keywords indicating failed authentication
-        message_lower = entry['message'].lower()
+        message_lower = entry.message.lower()
         if 'failed password' in message_lower or 'authentication failure' in message_lower:
             anomalies['failed_logins']['count'] += 1
-            anomalies['failed_logins']['entries'].append(entry)
+            anomalies['failed_logins']['entries'].append(entry.to_dict())
         
         # Detection Rule 2: Host Activity
         # Count log entries per hostname
-        hostname = entry['hostname']
+        hostname = entry.hostname
         host_counts[hostname] = host_counts.get(hostname, 0) + 1
 
         # Detection Rule 3: Process Activity
         # Count log entries per process
-        process = entry['process']
+        process = entry.process
         process_counts[process] = process_counts.get(process, 0) + 1
     
     # EVALUATION PHASE: Compare counts to thresholds
@@ -343,16 +382,29 @@ def detect_anomalies(entries, thresholds=None):
     
     return anomalies
 
-def export_anomalies(anomalies):
+def export_anomalies(
+    anomalies: Dict[str, Any],
+    formatter: Optional[Callable[[Dict[str, Any]], Optional[str]]] = None
+) -> None:
     """
     Display detected anomalies in human-readable format.
 
     Args:
         anomalies (dict): Output from detect_anomalies()
+        formatter (callable, optional): Custom formatter callable that
+            accepts the anomalies dict and returns a string to print or
+            writes output directly. Enables downstream integrations such
+            as JSON serialization.
     
     Returns:
         None (prints to stdout)
     """
+    if formatter:
+        formatted_output = formatter(anomalies)
+        if formatted_output:
+            print(formatted_output)
+        return
+
     print("=" * 60)
     print("ANOMALY DETECTION REPORT")
     print("=" * 60)
@@ -361,53 +413,54 @@ def export_anomalies(anomalies):
     # Summary
     total = anomalies['summary']['total_anomalies']
     if total == 0:
-        print("✓ No anomalies detected. All activity appears normal.")
+        print("[OK] No anomalies detected. All activity appears normal.")
         print()
         return
     
-    print(f"⚠️ {total} anomaly type(s) detected")
+    print(f"[WARNING] {total} anomaly type(s) detected")
     print()
 
     # Failed Logins
     if anomalies['failed_logins']['is_anomaly']:
         count = anomalies['failed_logins']['count']
         threshold = anomalies['failed_logins']['threshold']
-        print(f"🚨 FAILED LOGIN ATTEMPTS")
+        print("[ALERT] FAILED LOGIN ATTEMPTS")
         print(f"   Count: {count} (threshold: {threshold})")
-        print(f"   Risk: Possible brute force attack")
-        print(f"   Action Investigate source IPs, consider blocking")
+        print("   Risk: Possible brute force attack")
+        print("   Action: Investigate source IPs, consider blocking")
         print()
 
         # Show first 3 examples
         print("   Sample entries:")
         for idx, entry in enumerate(anomalies['failed_logins']['entries'][:3], 1):
-            print(f"     {idx}. [{entry['timestamp']}] {entry['hostname']}: {entry['message'][:60]}...")
+            preview = entry['message'][:60]
+            print(f"     {idx}. [{entry['timestamp']}] {entry['hostname']}: {preview}...")
         if len(anomalies['failed_logins']['entries']) > 3:
             print(f"     ... and {len(anomalies['failed_logins']['entries']) - 3} more")
         print()
     
     # High Activity Hosts
     if anomalies['high_activity_hosts']:
-        print(f"🚨 HIGH ACTIVITY HOSTS")
+        print("[ALERT] HIGH ACTIVITY HOSTS")
         print(f"   {len(anomalies['high_activity_hosts'])} host(s) exceeding activity threshold")
-        print(f"   Risk: Compromised system or automated attack")
-        print(f"   Action: Investigate these hosts for unusual behavior")
+        print("   Risk: Compromised system or automated attack")
+        print("   Action: Investigate these hosts for unusual behavior")
         print()
         for hostname, data in list(anomalies['high_activity_hosts'].items())[:5]:
-            print(f"     • {hostname}: {data['count']} entries (threshold: {data['threshold']})")
+            print(f"     - {hostname}: {data['count']} entries (threshold: {data['threshold']})")
         if len(anomalies['high_activity_hosts']) > 5:
             print(f"     ... and {len(anomalies['high_activity_hosts']) - 5} more")
         print()
     
     #  Process Anomalies
     if anomalies['process_anomalies']:
-        print(f"🚨 PROCESS ANOMALIES")
+        print("[ALERT] PROCESS ANOMALIES")
         print(f"   {len(anomalies['process_anomalies'])} process(es) with unusual activity")
-        print(f"   Risk: Malware, misconfigured service, or system issue")
-        print(f"   Action: Verify processes are legitimate and expected")
+        print("   Risk: Malware, misconfigured service, or system issue")
+        print("   Action: Verify processes are legitimate and expected")
         print()
         for process, data in list(anomalies['process_anomalies'].items())[:5]:
-            print(f"     • {process}: {data['count']} entries (threshold: {data['threshold']})")
+            print(f"     - {process}: {data['count']} entries (threshold: {data['threshold']})")
         if len(anomalies['process_anomalies']) > 5:
             print(f"     ... and {len(anomalies['process_anomalies']) - 5} more")
         print()
@@ -416,7 +469,97 @@ def export_anomalies(anomalies):
     print("END OF ANOMALY REPORT")
     print("=" * 60)
 
-def main():
+def validate_thresholds(threshold_strings: Optional[List[str]]) -> Optional[Dict[str, int]]:
+    """
+    Validate and parse threshold arguments from command line.
+
+    Args:
+        threshold_strings (list): List of strings like "failed_logins=10"
+    
+    Returns:
+        dict: Validated threshold dictionary
+    
+    Raises: ValueError If threshold format is invalid
+    """
+    if not threshold_strings:
+        return None
+    
+    valid_keys = ['failed_logins', 'host_activity', 'process_activity']
+    thresholds = {}
+
+    for threshold_str in threshold_strings:
+        # Check format: must contain '='
+        if '=' not in threshold_str:
+            logger.error("Invalid threshold format '%s'", threshold_str)
+            logger.error("Expected format: key=value (e.g., failed_logins=10)")
+            sys.exit(1)
+        
+        # Split and validate
+        parts = threshold_str.split('=')
+        if len(parts) != 2:
+            logger.error("Invalid threshold format '%s'", threshold_str)
+            logger.error("Expected format: key=value (e.g., failed_logins=10)")
+            sys.exit(1)
+        
+        key, value_str = parts
+
+        # Validate key
+        if key not in valid_keys:
+            logger.error("Unknown threshold key '%s'", key)
+            logger.error("Valid keys: %s", ', '.join(valid_keys))
+            sys.exit(1)
+        
+        # Validate value is a positive integer
+        try:
+            value = int(value_str)
+        except ValueError:
+            logger.error("Threshold value '%s' is not a valid integer", value_str)
+            sys.exit(1)
+        
+        if value <= 0:
+            logger.error("Threshold value must be positive, got %d", value)
+            sys.exit(1)
+        
+        thresholds[key] = value
+    
+    return thresholds
+
+def validate_output_path(output_path: Optional[str]) -> None:
+    """
+    Validate that output path is writable.
+
+    Args:
+        output_path (str): Path to output file
+    
+    Returns:
+        None
+    
+    Raises:
+        SystemExit: If path is not writable
+    """
+    if not output_path:
+        return # stdout is always valid
+    
+    # Check is directory exists
+    directory = os.path.dirname(output_path)
+
+    if directory and not os.path.exists(directory):
+        logger.error("Output directory '%s' does not exist", directory)
+        sys.exit(1)
+    
+    # Check if we can write to the location
+    if directory:
+        if not os.access(directory, os.W_OK):
+            logger.error("No write permission for directory '%s'", directory)
+            sys.exit(1)
+    
+    else:
+        # No directory specified, writing to current directory
+        if not os.access('.', os.W_OK):
+            logger.error("No write permission in current directory")
+            sys.exit(1)
+
+def main() -> None:
     """
     Main function to orchestrate log parsing.
 
@@ -447,6 +590,9 @@ def main():
     parser.add_argument('--output',
                         help='Output filename (default: stdout)')
     
+    parser.add_argument('--failed-output',
+                        help='Write unparsable line details to JSON (default: disabled)')
+    
     # Optional: enable anomaly detection
     parser.add_argument('--detect',
                         action='store_true',
@@ -460,27 +606,81 @@ def main():
     # Parse the arguments
     args = parser.parse_args()
 
-    # Read the log file
-    lines = read_file(args.logfile)
+    # Validate output path if provided
+    validate_output_path(args.output)
+    validate_output_path(args.failed_output)
 
     # Parse all lines into a list of dictionaries
-    entries = []
-    for line in lines:
-        if not line: # Skip empty lines
-            continue
-        parsed = parse_syslog(line)
-        if parsed:
-            entries.append(parsed)
+    entries: List[ParsedEntry] = []
+    failed_lines = 0
+    total_lines = 0
+    parse_failures: List[Dict[str, Any]] = []
+
+    try:
+        for record in read_file(args.logfile):
+            total_lines += 1
+            if not record.text:  # Skip empty lines
+                continue
+            parsed = parse_syslog(record.text)
+            if parsed:
+                entries.append(parsed)
+            else:
+                failed_lines += 1
+                reasons = ['regex_mismatch']
+                if record.decoding_issue:
+                    reasons.append('decoding_fallback')
+                parse_failures.append({
+                    'line_number': record.number,
+                    'content': record.text,
+                    'reasons': reasons
+                })
+    except FileNotFoundError:
+        logger.error("File '%s' not found.", args.logfile)
+        sys.exit(1)
+    except PermissionError:
+        logger.error("Permission denied reading '%s'.", args.logfile)
+        sys.exit(1)
+    except OSError as err:
+        logger.error("Could not read file '%s': %s", args.logfile, err)
+        sys.exit(1)
+
+    # Warn if file is very large
+    if total_lines > 100000:
+        file_size_mb = os.path.getsize(args.logfile) / (1024 * 1024)
+        logger.warning(
+            "Large file detected (%d lines, %.1fMB). Processing may take longer and use more memory.",
+            total_lines,
+            file_size_mb,
+        )
+
+    # Check if we got any valid entries
+    if not entries:
+        logger.error("No valid log entries found in %s", args.logfile)
+        logger.error("Parsed %d lines, %d failed to match syslog format", total_lines, failed_lines)
+        logger.error("Expected format: <timestamp> <hostname> <process>[<pid>]: <message>")
+        logger.error("Example: Nov 12 10:23:01 server sshd[1234]: Connection closed")
+        sys.exit(1)
+    
+    # Optionally warn if many lines failed
+    if failed_lines > 0:
+        total_processed = len(entries) + failed_lines
+        success_rate = len(entries) / total_processed * 100 if total_processed else 0
+        if success_rate < 50:
+            logger.warning("Only %.1f%% of lines parsed successfully", success_rate)
+        if parse_failures:
+            preview = parse_failures[0]
+            snippet = preview['content'][:60]
+            logger.info(
+                "Example unparsable line %d: %s (reasons: %s)",
+                preview['line_number'],
+                snippet,
+                ', '.join(preview['reasons']),
+            )
     
     # If anomaly detection requested
     if args.detect:
         # Parse custom thresholds if provided
-        custom_thresholds = None
-        if args.thresholds:
-            custom_thresholds = {}
-            for threshold_str in args.thresholds:
-                key, value = threshold_str.split('=')
-                custom_thresholds[key] = int(value)
+        custom_thresholds = validate_thresholds(args.thresholds)
     
         # Detect anomalies
         anomalies = detect_anomalies(entries, custom_thresholds)
@@ -494,15 +694,37 @@ def main():
             print("PARSED LOG DATA")
             print("=" * 60 + "\n")
 
+    # Optionally export failed line details
+    if args.failed_output:
+        try:
+            with open(args.failed_output, 'w') as failed_file:
+                json.dump(parse_failures, failed_file, indent=2, ensure_ascii=False)
+            logger.info("Wrote %d unparsable line(s) to %s", len(parse_failures), args.failed_output)
+        except OSError as err:
+            logger.error("Failed to write unparsable line report: %s", err)
+            sys.exit(1)
+    elif parse_failures:
+        logger.info(
+            "Failed to parse %d line(s). Use --failed-output to capture full details.",
+            len(parse_failures),
+        )
+
     # Output based on format
-    if args.format == 'json':
-        export_json(entries, args.output)
-    elif args.format == 'csv':
-        export_csv(entries, args.output)
-    else:
-        export_text(entries)
+    try:
+        if args.format == 'json':
+            export_json(entries, args.output)
+        elif args.format == 'csv':
+            export_csv(entries, args.output)
+        else:
+            export_text(entries)
+    except (OSError, TypeError, ValueError) as err:
+        logger.error("Failed to export data: %s", err)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    # This ensures main() only runs when script is executed directly,
-    # not when imported as a module
-    main()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.error("Interrupted by user. Exiting cleanly..")
+        sys.exit(130)  # Standard exit code for Ctrl+C

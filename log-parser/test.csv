@@ -1,0 +1,9 @@
+timestamp,hostname,process,pid,message
+Oct 29 14:23:01,webserver,sshd,12345,Failed password for admin from 192.168.1.100 port 52341 ssh2
+Oct 29 14:23:02,webserver,sshd,12345,Failed password for admin from 192.168.1.100 port 52341 ssh2
+Oct 29 14:23:03,webserver,sshd,12345,Failed password for admin from 192.168.1.100 port 52341 ssh2
+Oct 29 14:23:04,webserver,sshd,12346,Accepted password for admin from 192.168.1.100 port 52341 ssh2
+Oct 29 14:25:10,webserver,kernel,0,CPU0 temperature above threshold
+Oct 29 14:30:22,webserver,systemd,1,Started Daily apt download activities
+Oct 29 14:35:45,webserver,sudo,23456,admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/bin/cat /etc/shadow
+Oct 29 14:40:11,webserver,sshd,12347,Accepted publickey for alice from 10.0.0.50 port 44123 ssh2

@@ -1,30 +1,21 @@
 # Security Log Parser
 
-A Python tool to parse and analyze security logs from various formats. Currently supports syslog format with plans to expand to Apache and nginx logs.
-
-**Version:** 1.3
-**Status:** In Progress
+A Python CLI that ingests syslog-formatted files, normalizes them into structured fields, and exports the data for downstream security tooling.
 
 ## Features
 
-- [x] Parse syslog format
-- [x] Structured output (timestamp, hostname, process, PID, message)
-- [x] Export to JSON (v1.1)
-- [x] Export to CSV (v1.2)
-- [x] Anomaly detection with configurable thresholds (NEW in v1.3)
-- [x] Export to human-readable text
-- [x] Command-line interface with format selection
-- [x] Error handling (missing files, permissions, malformed lines)
-- [x] Multiple file testing
-- [ ] Parse Apache logs (planned v1.4)
-- [ ] Parse nginx logs (planned v1.4)
-- [ ] Advanced anomaly detection (rate-based, IP tracking) (planned v2.0)
+- Syslog parsing with timestamp/host/process/pid/message normalization
+- Streaming file reader with UTF-8/latin-1 fallback for noisy logs
+- Human-readable text output plus JSON and CSV exporters
+- Threshold-based anomaly detection for failed logins, noisy hosts, and suspicious processes
+- CLI argument validation, custom thresholds, and optional failed-line reporting
+- Comprehensive unittest suite with fixture coverage
 
 ## Installation
 
 ### Requirements
 
-- **Python 3.6 or higher** (check with `python3 --version`)
+- **Python 3.11 or higher** (check with `python3 --version`)
 - No external dependencies (uses Python standard library only)
 
 ### Setup
@@ -71,12 +62,6 @@ python3 log_parser.py /var/log/syslog
 **Parse the included sample:**
 ```bash
 python3 log_parser.py sample.log
-```
-
-**Run all tests:**
-```bash
-chmod +x run_tests.sh
-./run_tests.sh
 ```
 
 ### Export to JSON
@@ -189,26 +174,18 @@ python3 log_parser.py --detect --thresholds failed_logins=10 host_activity=30 sa
 - **Process anomalies** (default threshold: 15) - Malware or misconfigurations
 
 **Example output:**
-````
+```text
 ==============================================================
 ANOMALY DETECTION REPORT
 ==============================================================
 
-⚠️  1 anomaly type(s) detected
+[WARNING] 1 anomaly type(s) detected
 
-🚨 FAILED LOGIN ATTEMPTS
+[ALERT] FAILED LOGIN ATTEMPTS
    Count: 8 (threshold: 5)
    Risk: Possible brute force attack
    Action: Investigate source IPs, consider blocking
-   
-   Sample entries:
-     1. [Nov 12 14:23:01] webserver: Failed password for admin...
-     2. [Nov 12 14:23:03] webserver: Failed password for admin...
-     3. [Nov 12 14:23:05] webserver: Failed password for admin...
-     ... and 5 more
-
-==============================================================
-````
+```
 
 **Combine with export formats:**
 ````bash
@@ -256,39 +233,25 @@ python3 log_parser.py --format csv --output results.csv sample.log
 
 ## Output Format
 
-The parser outputs structured information for each log line, followed by a summary.
+`log_parser.py` emits structured entries followed by a summary. Example text output for `sample.log`:
 
-### Example Output
+```text
+Total entries parsed: 2
 
-**Input (sample.log):**
-```
-Oct 29 14:23:01 webserver sshd[12345]: Failed password for admin from 192.168.1.100 port 52341 ssh2
-Oct 29 14:23:04 webserver sshd[12346]: Accepted password for admin from 192.168.1.100 port 52341 ssh2
-```
-
-**Output:**
-```
-Parsing log file: sample.log
-------------------------------------------------------------
-Total lines read: 2
-
-Line 1:
+Entry 1:
   Timestamp: Oct 29 14:23:01
-  Hostname:  webserver
-  Process:   sshd (PID: 12345)
-  Message:   Failed password for admin from 192.168.1.100 port 52341 ssh2
+  Hostname: webserver
+  Process: sshd (PID: 12345)
+  Message: Failed password for admin from 192.168.1.100 port 52341 ssh2
 
-Line 2:
+Entry 2:
   Timestamp: Oct 29 14:23:04
-  Hostname:  webserver
-  Process:   sshd (PID: 12346)
-  Message:   Accepted password for admin from 192.168.1.100 port 52341 ssh2
+  Hostname: webserver
+  Process: sshd (PID: 12346)
+  Message: Accepted password for admin from 192.168.1.100 port 52341 ssh2
 
 ------------------------------------------------------------
-Summary:
-  Successfully parsed: 2
-  Failed to parse:     0
-  Total lines:         2
+Summary: 2 entries successfully parsed
 ```
 
 ### Error Handling
@@ -355,27 +318,15 @@ The repository includes several test files to verify functionality:
 3. **malformed.log** - Mix of valid and invalid lines (error handling)
 4. **large.log** - 49 entries (performance test)
 
-### Running Tests
+### How to Run Tests
 
-**Test all files automatically:**
+Use Python's unittest discovery to execute the full suite:
+
 ```bash
-./run_tests.sh
+python3 -m unittest -v
 ```
 
-**Test individual files:**
-```bash
-python3 log_parser.py sample.log
-python3 log_parser.py malformed.log
-python3 log_parser.py large.log
-python3 log_parser.py empty.log
-```
-
-### Expected Results
-
-- **sample.log**: 8/8 lines parsed successfully
-- **malformed.log**: ~6/10 lines parsed (4 failures expected)
-- **large.log**: 50/50 lines parsed successfully
-- **empty.log**: 1 lines, no crashes
+This command runs parser unit tests, export tests, anomaly detection checks, and CLI integration coverage.
 
 ## Security Use Cases
 
@@ -416,21 +367,11 @@ See [DESIGN.md](DESIGN.md) for:
 
 ## Limitations
 
-**Current version (v1.2):**
-- Only supports syslog format
-- Reads entire file into memory (not ideal for multi-GB files)
-- No automatic pattern detection
+- Focused on traditional syslog format (no Apache/nginx parsing yet)
+- Anomaly detection is rule/threshold-based rather than statistical
+- Output is batch-oriented; real-time streaming integrations would require additional work
 
-See [Roadmap](#roadmap) for planned improvements.
-
-## Roadmap
-
-**v1.1**: JSON export (COMPLETE)  
-**v1.2**: CSV export (COMPLETE)  
-**v1.3**: Threshold-based anomaly detection (COMPLETE)  
-**v1.4**: Apache and nginx log support  
-**v2.0**: Advanced anomaly detection (rate-based, IP tracking, ML)  
-**v2.5**: Real-time monitoring, streaming parser
+See [HISTORY.md](HISTORY.md) for release notes and [DESIGN.md](DESIGN.md) for future considerations.
 
 ## Troubleshooting
 
@@ -484,41 +425,9 @@ Built as part of a security researcher curriculum focusing on:
 
 This is the first tool in a collection of 6-8 security tools to be built over the next 12 months.
 
-## Version History
+## History
 
-**v1.0** (November 2025)
-- Initial release
-- Syslog format parsing
-- Error handling
-- Multiple test files
-- Documentation
-
-**v1.1** (November 2025)
-- Added JSON export functionality
-- Command-line argument parsing with argparse
-- Support for `--format` and `--output` flags
-- Validated JSON output with special character handling
-- Updated documentation with usage examples
-- Test files for edge cases (empty, single entry, special chars)
-
-**v1.2** (November 2025)
-- Added CSV export functionality
-- RFC 4180 compliant CSV format (industry standard)
-- Automatic escaping of special characters (commas, quotes, newlines)
-- Supports both file output and stdout for piping
-- Integration examples with spreadsheets and command-line tools
-- Updated documentation with CSV usage patterns
-- Tested with edge cases (empty files, special characters, large files)
-
-**v1.3** (November 2025)
-- Added threshold-based anomaly detection
-- Detects failed login attempts, high activity hosts, and process anomalies
-- Configurable thresholds via command line
-- Three-phase detection algorithm (counting, evaluation, reporting)
-- Comprehensive anomaly reporting with security context
-- Combined anomaly detection with existing export formats
-- Updated documentation with detection methodology
-- Test files for brute force and anomaly scenarios
+Release notes live in [HISTORY.md](HISTORY.md). Each entry captures the features and fixes included in that version.
 
 ---
 
